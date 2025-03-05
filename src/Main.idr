@@ -85,12 +85,13 @@ runFresh ops = run ops (MkTape [] 0 [])
 runQuiet : List Op -> (Int, Int)
 runQuiet = execState (0, 0) . runFresh
 
+verified : IO Bool
 verified =
   let src = "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
       ops = parse (unpack src)
       csActual = runQuiet ops
       csExpected = foldl (\cs, c => accCheckSum (ord c) cs) (0, 0) (unpack "Hello World!\n")
-  in csActual == csExpected
+  in pure $ csActual == csExpected
 
 partial
 notify : String -> IO ()
@@ -105,19 +106,20 @@ notify msg = do
 partial
 main : IO ()
 main = do
-  let True = verified
+  True <- verified
+    | False => die $ "Verification failed."
   [_, fn] <- getArgs
   Right src <- readFile fn
+    | Left err => die $ "Error reading file: " ++ show err
   quiet <- getEnv "QUIET"
   pid <- getPID
-  notify $ "Idris\t" ++ show pid
+  notify $ "Idris (FP)\t" ++ show pid
   let ops = parse (unpack src)
   case quiet of
-      Just _  => let cs = runQuiet ops
-                 in do
-                   notify "stop"
-                   putStrLn $ "Output checksum: " ++ show (checkSum cs)
-      Nothing => do
-                   _ <- runFresh ops
-                   notify "stop"
-  pure ()
+    Just _  => do
+      let cs = runQuiet ops
+      notify "stop"
+      putStrLn $ "Output checksum: " ++ show (checkSum cs)
+    Nothing => do
+      _ <- runFresh ops
+      notify "stop"

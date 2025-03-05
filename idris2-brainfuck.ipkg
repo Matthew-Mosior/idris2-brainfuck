@@ -13,7 +13,8 @@ authors = "Matthew-Mosior"
 -- langversion
 
 -- packages to add to search path
-depends = network
+depends = base
+        , network
 
 -- modules to install
 -- modules =
